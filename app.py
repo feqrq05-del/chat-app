@@ -3,22 +3,20 @@ import sqlite3
 import random
 import time
 from datetime import datetime
-from flask import Flask, request, redirect, url_for, session, render_template_string, jsonify, send_from_directory
-from flask_socketio import SocketIO, emit, join_room
+from flask import Flask, request, redirect, url_for, session, render_template_string, send_from_directory
+from flask_socketio import SocketIO, emit
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'higori-platform-vip-super-secret-2026'
 
-# مسار تخزين الملفات المرفوعة
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# --- قاعدة البيانات ---
 def get_db():
     conn = sqlite3.connect('higori_data.db')
     conn.row_factory = sqlite3.Row
@@ -95,7 +93,6 @@ def init_db():
 
 init_db()
 
-# --- قوالب HTML / CSS النيون بالكامل ---
 AUTH_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -235,9 +232,7 @@ MAIN_TEMPLATE = """
             --text-main: #ffffff;
             --text-muted: #8ba2b5;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
@@ -247,7 +242,6 @@ MAIN_TEMPLATE = """
             align-items: flex-start;
             padding: 12px 8px;
         }
-
         .phone-wrapper {
             width: 100%;
             max-width: 440px;
@@ -256,8 +250,6 @@ MAIN_TEMPLATE = """
             gap: 12px;
             position: relative;
         }
-
-        /* Top Header */
         .header-top {
             display: flex;
             justify-content: space-between;
@@ -281,8 +273,6 @@ MAIN_TEMPLATE = """
             text-align: center;
             flex: 1;
         }
-
-        /* Settings Green Top Button */
         .btn-settings-top {
             width: 100%;
             background: linear-gradient(180deg, #00c76d, #008f4c);
@@ -295,8 +285,6 @@ MAIN_TEMPLATE = """
             cursor: pointer;
             box-shadow: var(--neon-glow);
         }
-
-        /* Navigation Bar */
         .nav-bar {
             display: flex;
             justify-content: space-between;
@@ -322,8 +310,6 @@ MAIN_TEMPLATE = """
         }
         .nav-item .icon { font-size: 20px; }
         .nav-item.active .icon { filter: drop-shadow(0 0 6px var(--neon-green)); }
-
-        /* General Card Screen */
         .tab-panel {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -334,8 +320,6 @@ MAIN_TEMPLATE = """
             flex-direction: column;
         }
         .tab-panel.active { display: flex; }
-
-        /* 1. Status / Stories Screen */
         .status-tray {
             display: flex;
             gap: 14px;
@@ -369,8 +353,6 @@ MAIN_TEMPLATE = """
         .story-ring.dashed { border-style: dashed; }
         .story-ring img { width: 100%; height: 100%; object-fit: cover; }
         .story-label { font-size: 11px; color: var(--text-muted); max-width: 65px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; text-align: center; }
-
-        /* 2. Chat Screens */
         .chat-sub-nav {
             display: flex;
             gap: 8px;
@@ -393,7 +375,6 @@ MAIN_TEMPLATE = """
             color: var(--neon-green);
             font-weight: bold;
         }
-
         #chat-stream {
             flex: 1;
             height: 330px;
@@ -422,7 +403,6 @@ MAIN_TEMPLATE = """
         }
         .bubble-header { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; color: var(--neon-green); font-weight: bold; margin-bottom: 4px; }
         .bubble-time { font-size: 10px; color: var(--text-muted); text-align: left; margin-top: 4px; }
-
         .chat-input-bar {
             display: flex;
             align-items: center;
@@ -449,8 +429,6 @@ MAIN_TEMPLATE = """
             font-size: 14px;
             cursor: pointer;
         }
-
-        /* 3. Groups & People Lists */
         .item-card {
             background: var(--card-inner);
             border: 1px solid var(--border-color);
@@ -490,8 +468,6 @@ MAIN_TEMPLATE = """
         }
         .btn-small.green { background: var(--neon-green); color: #000; border: none; }
         .btn-small.danger { background: rgba(255, 75, 75, 0.2); border-color: #ff4b4b; color: #ff6b6b; }
-
-        /* 4. Profile Screen */
         .profile-cover {
             width: 100%;
             height: 140px;
@@ -564,8 +540,6 @@ MAIN_TEMPLATE = """
         }
         .stat-val { font-size: 22px; font-weight: 900; color: var(--neon-green); }
         .stat-lbl { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
-        /* Full Modals */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -601,8 +575,6 @@ MAIN_TEMPLATE = """
             font-size: 16px;
             cursor: pointer;
         }
-
-        /* Toast notification */
         #toast {
             position: fixed;
             bottom: 30px;
@@ -623,16 +595,13 @@ MAIN_TEMPLATE = """
 <body>
 
 <div class="phone-wrapper">
-    <!-- Header -->
     <div class="header-top">
         <div class="theme-pill" onclick="toggleTheme()">🌙</div>
         <div class="brand-title">Higori platform</div>
     </div>
 
-    <!-- Green Settings Button -->
     <button class="btn-settings-top" onclick="openModal('settings-modal')">الإعدادات</button>
 
-    <!-- Navigation Bar -->
     <div class="nav-bar">
         <div class="nav-item active" id="btn-status" onclick="switchTab('status')">
             <span class="icon">⛺</span><span>الحالات</span>
@@ -651,16 +620,13 @@ MAIN_TEMPLATE = """
         </div>
     </div>
 
-    <!-- 1. Status Tab -->
     <div class="tab-panel active" id="tab-status">
         <div style="font-weight: bold; font-size: 14px;">الحالات (24 ساعة)</div>
         <div class="status-tray">
-            <!-- Add status bubble -->
             <div class="story-bubble" onclick="openModal('add-story-modal')">
                 <div class="story-ring dashed">+</div>
                 <div class="story-label">أضف</div>
             </div>
-            <!-- Stories from DB -->
             {% for s in stories %}
                 <div class="story-bubble" onclick="viewStory('{{ s.user_name }}', '{{ s.created_at }}', '{{ s.content_text }}', '{{ s.media_path }}')">
                     <div class="story-ring">
@@ -681,7 +647,6 @@ MAIN_TEMPLATE = """
         {% endif %}
     </div>
 
-    <!-- 2. Chat Tab -->
     <div class="tab-panel" id="tab-chats">
         <div class="chat-sub-nav">
             <div class="sub-pill active">الدردشة العامة</div>
@@ -716,7 +681,6 @@ MAIN_TEMPLATE = """
         </div>
     </div>
 
-    <!-- 3. Groups Tab -->
     <div class="tab-panel" id="tab-groups">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div style="font-weight: bold; font-size: 15px;">مجموعاتي</div>
@@ -740,17 +704,14 @@ MAIN_TEMPLATE = """
         </div>
     </div>
 
-    <!-- 4. People / Discover Tab -->
     <div class="tab-panel" id="tab-people">
         <div style="font-weight: bold; font-size: 15px; margin-bottom: 10px;">اكتشف الأعضاء ({{ all_users|length }})</div>
         
-        <!-- Search -->
         <form method="GET" action="/" style="display: flex; gap: 6px; margin-bottom: 15px;">
             <input name="q" placeholder="ابحث بالاسم أو اليوزر أو ID" value="{{ search_query }}" style="flex:1; background: var(--card-inner); border: 1px solid var(--border-color); border-radius: 10px; padding: 10px; color: #fff; font-size: 12px;">
             <button class="btn-small green" type="submit">بحث</button>
         </form>
 
-        <!-- Requests if any -->
         {% if pending_requests %}
             <div style="font-size: 12px; color: var(--neon-green); font-weight: bold; margin-bottom: 8px;">طلبات صداقة واردة:</div>
             {% for req in pending_requests %}
@@ -789,7 +750,6 @@ MAIN_TEMPLATE = """
         </div>
     </div>
 
-    <!-- 5. Profile Tab -->
     <div class="tab-panel" id="tab-profile">
         <div class="profile-cover">
             {% if current_user.cover %}<img src="/uploads/{{ current_user.cover }}">{% endif %}
@@ -835,7 +795,6 @@ MAIN_TEMPLATE = """
     </div>
 </div>
 
-<!-- Modal: Story Upload -->
 <div class="modal-overlay" id="add-story-modal">
     <div class="modal-content">
         <button class="btn-close-modal" onclick="closeModal('add-story-modal')">✕</button>
@@ -861,7 +820,6 @@ MAIN_TEMPLATE = """
     </div>
 </div>
 
-<!-- Modal: View Story -->
 <div class="modal-overlay" id="view-story-modal">
     <div class="modal-content" style="text-align: center;">
         <button class="btn-close-modal" onclick="closeModal('view-story-modal')">✕</button>
@@ -872,7 +830,6 @@ MAIN_TEMPLATE = """
     </div>
 </div>
 
-<!-- Modal: Create Group -->
 <div class="modal-overlay" id="create-group-modal">
     <div class="modal-content">
         <button class="btn-close-modal" onclick="closeModal('create-group-modal')">✕</button>
@@ -884,7 +841,6 @@ MAIN_TEMPLATE = """
     </div>
 </div>
 
-<!-- Modal: Edit Profile -->
 <div class="modal-overlay" id="edit-profile-modal">
     <div class="modal-content">
         <button class="btn-close-modal" onclick="closeModal('edit-profile-modal')">✕</button>
@@ -911,7 +867,6 @@ MAIN_TEMPLATE = """
     </div>
 </div>
 
-<!-- Modal: Settings Menu Full -->
 <div class="modal-overlay" id="settings-modal">
     <div class="modal-content" style="max-height: 85vh; overflow-y: auto;">
         <button class="btn-close-modal" onclick="closeModal('settings-modal')">✕</button>
@@ -961,7 +916,6 @@ MAIN_TEMPLATE = """
         showToast('وضع VIP الليلي مفعل افتراضياً');
     }
 
-    // Socket IO Messages
     socket.on('broadcast_msg', function(data) {
         const stream = document.getElementById('chat-stream');
         const row = document.createElement('div');
@@ -1015,7 +969,6 @@ MAIN_TEMPLATE = """
 </html>
 """
 
-# قالب بروفايل أي عضو يتم الضغط عليه من قائمة الأعضاء
 OTHER_PROFILE_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -1065,7 +1018,6 @@ OTHER_PROFILE_TEMPLATE = """
 </html>
 """
 
-# --- الراوتات والتوجيهات (Routes) ---
 @app.route('/')
 def home():
     if 'user_id' not in session:
@@ -1076,7 +1028,6 @@ def home():
     with get_db() as conn:
         current_user = conn.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
         
-        # البحث أو جلب الأعضاء
         if search_query:
             all_users = conn.execute(
                 "SELECT * FROM users WHERE (name LIKE ? OR username LIKE ? OR user_id_code LIKE ?) AND id != ?",
@@ -1085,26 +1036,20 @@ def home():
         else:
             all_users = conn.execute('SELECT * FROM users ORDER BY id DESC LIMIT 30').fetchall()
 
-        # الحالات
         stories = conn.execute('SELECT * FROM stories ORDER BY id DESC LIMIT 20').fetchall()
-        
-        # الرسائل العامة
         messages = conn.execute('SELECT * FROM messages WHERE group_id = 0 ORDER BY id ASC LIMIT 80').fetchall()
 
-        # طلبات الصداقة المعلقة الواردة
         pending_requests = conn.execute('''
             SELECT users.* FROM friendships 
             JOIN users ON friendships.user_a = users.id 
             WHERE friendships.user_b = ? AND friendships.status = 'pending'
         ''', (session['user_id'],)).fetchall()
 
-        # عدد الأصدقاء
         friends_count = conn.execute('''
             SELECT COUNT(*) as c FROM friendships 
             WHERE (user_a = ? OR user_b = ?) AND status = 'accepted'
         ''', (session['user_id'], session['user_id'])).fetchone()['c']
 
-        # المجموعات
         my_groups = conn.execute('''
             SELECT groups.*, users.name as owner_name FROM groups 
             JOIN users ON groups.owner_id = users.id 
@@ -1132,10 +1077,9 @@ def view_user_profile(user_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
     with get_db() as conn:
-        # زيادة عداد الزيارات للشخص المزار
         conn.execute('UPDATE users SET visits = visits + 1 WHERE id = ?', (user_id,))
         conn.commit()
-        u = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
+        u = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)) .fetchone()
     if not u:
         return redirect(url_for('home'))
     return render_template_string(OTHER_PROFILE_TEMPLATE, u=u)
@@ -1196,4 +1140,37 @@ def add_friend(target_id):
         chk = conn.execute('SELECT * FROM friendships WHERE (user_a = ? AND user_b = ?) OR (user_a = ? AND user_b = ?)',
                            (session['user_id'], target_id, target_id, session['user_id'])).fetchone()
         if not chk:
-            conn.execute('INSERT INTO friendships (user_a, user_b, status,
+            conn.execute('INSERT INTO friendships (user_a, user_b, status, created_at) VALUES (?, ?, ?, ?)',
+                         (session['user_id'], target_id, 'pending', now_str))
+            conn.commit()
+    return redirect(url_for('home'))
+
+@app.route('/accept_friend/<int:requester_id>')
+def accept_friend(requester_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    with get_db() as conn:
+        conn.execute('UPDATE friendships SET status = ? WHERE user_a = ? AND user_b = ?',
+                     ('accepted', requester_id, session['user_id']))
+        conn.commit()
+    return redirect(url_for('home'))
+
+@app.route('/reject_friend/<int:requester_id>')
+def reject_friend(requester_id):
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    with get_db() as conn:
+        conn.execute('DELETE FROM friendships WHERE user_a = ? AND user_b = ?', (requester_id, session['user_id']))
+        conn.commit()
+    return redirect(url_for('home'))
+
+@app.route('/new_group', methods=['POST'])
+def new_group():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    g_name = request.form.get('g_name', '').strip()
+    if g_name:
+        code = str(random.randint(10000000, 99999999))
+        now_str = datetime.now().strftime('%Y-%m-%d')
+        with get_db() as conn:
+            cur = 
