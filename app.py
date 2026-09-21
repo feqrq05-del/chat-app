@@ -1005,10 +1005,11 @@ OTHER_PROFILE_TEMPLATE = """
 </html>
 """
 
-@app.route('/')
-def index():
+# صفحة الدخول المباشرة عند فتح الرابط
+@app.route('/', methods=['GET', 'POST'])
+def home():
     if 'user_id' not in session:
-        return redirect('/login')
+        return render_template_string(AUTH_TEMPLATE, mode='login', error=None)
 
     search_query = request.args.get('q', '').strip()
 
@@ -1016,7 +1017,7 @@ def index():
         current_user = conn.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
         if not current_user:
             session.clear()
-            return redirect('/login')
+            return render_template_string(AUTH_TEMPLATE, mode='login', error=None)
         
         if search_query:
             all_users = conn.execute('SELECT * FROM users WHERE (name LIKE ? OR username LIKE ? OR user_id_code LIKE ?) AND id != ?', (f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", session['user_id'])).fetchall()
@@ -1025,11 +1026,8 @@ def index():
 
         stories = conn.execute('SELECT * FROM stories ORDER BY id DESC LIMIT 20').fetchall()
         messages = conn.execute('SELECT * FROM messages ORDER BY id ASC LIMIT 80').fetchall()
-
         pending_requests = conn.execute('SELECT users.* FROM friendships JOIN users ON friendships.user_a = users.id WHERE friendships.user_b = ? AND friendships.status = "pending"', (session['user_id'],)).fetchall()
-
         friends_count = conn.execute('SELECT COUNT(*) as c FROM friendships WHERE (user_a = ? OR user_b = ?) AND status = "accepted"', (session['user_id'], session['user_id'])).fetchone()['c']
-
         my_groups = conn.execute('SELECT * FROM groups ORDER BY id DESC').fetchall()
 
     return render_template_string(
@@ -1044,6 +1042,47 @@ def index():
         search_query=search_query
     )
 
+@app.route('/login', methods=['GET', 'POST'])
+def login_route():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '').lower().strip()
+        password = request.form.get('password', '')
+        with get_db() as conn:
+            u = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        if u and check_password_hash(u['password'], password):
+            session['user_id'] = u['id']
+            session['username'] = u['username']
+            session['name'] = u['name']
+            return redirect('/')
+        else:
+            error = 'اسم المستخدم أو كلمة المرور غير صحيحة'
+    return render_template_string(AUTH_TEMPLATE, mode='login', error=error)
+
+@app.route('/register', methods=['GET', 'POST'])
+def register_route():
+    error = None
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        username = request.form.get('username', '').lower().strip()
+        password = request.form.get('password', '')
+
+        if not name or not username or not password:
+            error = 'يرجى إكمال جميع الحقول'
+        else:
+            with get_db() as conn:
+                exists = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
+                if exists:
+                    error = 'اسم المستخدم هذا مستخدم مسبقاً'
+                else:
+                    vip_id = str(random.randint(10000000, 99999999))
+                    joined = datetime.now().strftime('%Y-%m-%d %H:%M')
+                    hashed = generate_password_hash(password)
+                    conn.execute('INSERT INTO users (user_id_code, name, username, password, joined_date) VALUES (?, ?, ?, ?, ?)', (vip_id, name, username, hashed, joined))
+                    conn.commit()
+                    return redirect('/')
+    return render_template_string(AUTH_TEMPLATE, mode='register', error=error)
+
 @app.route('/uploads/<filename>')
 def serve_upload(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -1051,7 +1090,7 @@ def serve_upload(filename):
 @app.route('/user/<int:user_id>')
 def view_user_profile(user_id):
     if 'user_id' not in session:
-        return redirect('/login')
+        return redirect('/')
     with get_db() as conn:
         conn.execute('UPDATE users SET visits = visits + 1 WHERE id = ?', (user_id,))
         conn.commit()
@@ -1063,7 +1102,7 @@ def view_user_profile(user_id):
 @app.route('/save_profile', methods=['POST'])
 def save_profile():
     if 'user_id' not in session:
-        return redirect('/login')
+        return redirect('/')
     name = request.form.get('name')
     bio = request.form.get('bio')
     avatar = request.files.get('avatar')
@@ -1086,7 +1125,7 @@ def save_profile():
 @app.route('/publish_story', methods=['POST'])
 def publish_story():
     if 'user_id' not in session:
-        return redirect('/login')
+        return redirect('/')
     text = request.form.get('story_text', '').strip()
     privacy = request.form.get('privacy', 'public')
     file = request.files.get('story_file')
@@ -1119,7 +1158,7 @@ def add_friend(target_id):
 @app.route('/accept_friend/<int:requester_id>')
 def accept_friend(requester_id):
     if 'user_id' not in session:
-        return redirect('/login')
+        return redirect('/')
     with get_db() as conn:
         conn.execute('UPDATE friendships SET status = ? WHERE user_a = ? AND user_b = ?', ('accepted', requester_id, session['user_id']))
         conn.commit()
@@ -1128,7 +1167,7 @@ def accept_friend(requester_id):
 @app.route('/reject_friend/<int:requester_id>')
 def reject_friend(requester_id):
     if 'user_id' not in session:
-        return redirect('/login')
+        return redirect('/')
     with get_db() as conn:
         conn.execute('DELETE FROM friendships WHERE user_a = ? AND user_b = ?', (requester_id, session['user_id']))
         conn.commit()
@@ -1137,7 +1176,7 @@ def reject_friend(requester_id):
 @app.route('/new_group', methods=['POST'])
 def new_group():
     if 'user_id' not in session:
-        return redirect('/login')
+        return redirect('/')
     g_name = request.form.get('g_name', '').strip()
     if g_name:
         code = str(random.randint(10000000, 99999999))
@@ -1147,21 +1186,31 @@ def new_group():
             conn.commit()
     return redirect('/')
 
-@app.route('/register', methods=['GET', 'POST'])
-def register_page():
-    error = None
-    if request.method == 'POST':
-        name = request.form.get('name', '').strip()
-        username = request.form.get('username', '').lower().strip()
-        password = request.form.get('password', '')
+@app.route('/logout')
+def logout_action():
+    session.clear()
+    return redirect('/')
 
-        if not name or not username or not password:
-            error = 'يرجى إكمال جميع الحقول'
-        else:
+@socketio.on('client_msg')
+def on_client_msg(data):
+    if 'user_id' in session:
+        text = data.get('text', '').strip()
+        view_once = data.get('view_once', 0)
+        if text:
+            now_time = datetime.now().strftime('%H:%M')
             with get_db() as conn:
-                exists = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
-                if exists:
-                    error = 'اسم المستخدم هذا مستخدم مسبقاً'
-                else:
-                    vip_id = str(random.randint(10000000, 99999999))
-                    joined = datetime.now().strf
+                conn.execute('INSERT INTO messages (sender_id, sender_name, content, view_once, created_at) VALUES (?, ?, ?, ?, ?)', (session['user_id'], session['name'], text, view_once, now_time))
+                conn.commit()
+
+            emit('broadcast_msg', {
+                'sender_id': session['user_id'],
+                'sender_name': session['name'],
+                'content': text,
+                'view_once': view_once,
+                'created_at': now_time,
+                'is_me': True
+            })
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
