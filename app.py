@@ -6,7 +6,7 @@ import sqlite3
 import random
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'fbi-sudan-full-app-2026'
+app.config['SECRET_KEY'] = 'higori-platform-vip-secret-2026'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 def get_db():
@@ -23,7 +23,7 @@ def init_db():
                 name TEXT NOT NULL,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
-                bio TEXT DEFAULT 'مرحباً بك في بروفايلي',
+                bio TEXT DEFAULT 'VIP Member at Higori Platform',
                 visits INTEGER DEFAULT 0
             )
         ''')
@@ -31,13 +31,219 @@ def init_db():
 
 init_db()
 
+AUTH_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Higori platform - VIP Portal</title>
+    <style>
+        :root {
+            --bg-color: #05080c;
+            --card-bg: rgba(13, 21, 30, 0.85);
+            --neon-green: #00ff88;
+            --neon-glow: 0 0 20px rgba(0, 255, 136, 0.45);
+            --border-glow: 1px solid rgba(0, 255, 136, 0.25);
+            --text-muted: #8ba2b5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top, #0f241d 0%, #05080c 70%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #ffffff;
+        }
+
+        .vip-card {
+            width: 100%;
+            max-width: 400px;
+            background: var(--card-bg);
+            border: var(--border-glow);
+            border-radius: 24px;
+            padding: 35px 25px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6), var(--neon-glow);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .vip-badge {
+            display: inline-block;
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--neon-green);
+            padding: 4px 14px;
+            border-radius: 30px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            border: 1px solid var(--neon-green);
+            margin-bottom: 12px;
+        }
+
+        .title {
+            font-size: 26px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            text-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+
+        .title span {
+            color: var(--neon-green);
+            text-shadow: var(--neon-glow);
+        }
+
+        .subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+            text-align: right;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            padding-right: 4px;
+        }
+
+        .input-box {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(8, 14, 20, 0.9);
+            border: 1px solid #1a2936;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        .input-box:focus {
+            border-color: var(--neon-green);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-vip {
+            width: 100%;
+            padding: 14px;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #00ff88, #00a859);
+            border: none;
+            border-radius: 12px;
+            color: #05080c;
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: var(--neon-glow);
+            transition: 0.3s;
+        }
+
+        .btn-vip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(0, 255, 136, 0.7);
+        }
+
+        .toggle-link {
+            margin-top: 22px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .toggle-link a {
+            color: var(--neon-green);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .error-msg {
+            background: rgba(255, 75, 75, 0.15);
+            border: 1px solid #ff4b4b;
+            color: #ff6b6b;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            margin-bottom: 18px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="vip-card">
+    <div class="vip-badge">VIP ACCESS</div>
+    <div class="title">Higori <span>platform</span></div>
+    
+    {% if mode == 'register' %}
+        <div class="subtitle">إنشاء حساب مستخدم جديد ومميّز</div>
+        {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <label>الاسم المستعار (الظاهر للجميع)</label>
+                <input class="input-box" name="name" placeholder="مثلاً: أسامة" required>
+            </div>
+            <div class="form-group">
+                <label>اسم المستخدم (Username بالإنجليزية)</label>
+                <input class="input-box" name="username" placeholder="مثلاً: osama_vip" required>
+            </div>
+            <div class="form-group">
+                <label>كلمة المرور السرية</label>
+                <input class="input-box" type="password" name="password" placeholder="••••••••" required>
+            </div>
+            <button class="btn-vip" type="submit">إنشاء الحساب الآن</button>
+        </form>
+        <div class="toggle-link">
+            لديك حساب بالفعل؟ <a href="/login">تسجيل الدخول</a>
+        </div>
+    {% else %}
+        <div class="subtitle">سجّل دخولك للوصول للدردشة المباشرة</div>
+        {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+        <form method="POST">
+            <div class="form-group">
+                <label>اسم المستخدم</label>
+                <input class="input-box" name="username" placeholder="اسم المستخدم" required>
+            </div>
+            <div class="form-group">
+                <label>كلمة المرور</label>
+                <input class="input-box" type="password" name="password" placeholder="••••••••" required>
+            </div>
+            <button class="btn-vip" type="submit">دخول النظام</button>
+        </form>
+        <div class="toggle-link">
+            مستخدم جديد؟ <a href="/register">إنشاء حساب VIP</a>
+        </div>
+    {% endif %}
+</div>
+
+</body>
+</html>
+"""
+
 MAIN_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FBI SUDANESE</title>
+    <title>Higori platform</title>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <style>
         :root {
@@ -70,8 +276,7 @@ MAIN_TEMPLATE = """
 
         .app-title {
             text-align: center;
-            font-family: monospace;
-            font-size: 24px;
+            font-size: 22px;
             font-weight: 900;
             letter-spacing: 2px;
             color: var(--neon-green);
@@ -86,7 +291,7 @@ MAIN_TEMPLATE = """
             padding: 12px;
             border-radius: 12px;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 15px;
             cursor: pointer;
             box-shadow: var(--neon-glow);
             margin-bottom: 5px;
@@ -306,7 +511,7 @@ MAIN_TEMPLATE = """
 <body>
 
 <div class="container">
-    <div class="app-title">FBI SUDANESE</div>
+    <div class="app-title">Higori platform</div>
     <button class="btn-settings-top" onclick="switchTab('settings')">الإعدادات</button>
 
     <div class="nav-bar">
@@ -342,7 +547,7 @@ MAIN_TEMPLATE = """
     </div>
 
     <div class="tab-content" id="tab-chats">
-        <div style="font-weight: bold; margin-bottom: 10px; color: var(--neon-green);">الدردشة العامة المباشرة</div>
+        <div style="font-weight: bold; margin-bottom: 10px; color: var(--neon-green);">غرفة المحادثة المباشرة VIP</div>
         <div id="chat-messages"></div>
         <div class="chat-inputs">
             <input type="text" id="msg-input" placeholder="اكتب رسالتك..." autocomplete="off">
@@ -354,7 +559,7 @@ MAIN_TEMPLATE = """
         <div style="font-weight: bold; margin-bottom: 15px;">مجموعاتي</div>
         <div style="background: #14222d; padding: 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color);">
             <div>
-                <div style="font-weight: bold;">FREE FIRE</div>
+                <div style="font-weight: bold;">FREE FIRE VIP</div>
                 <div style="font-size: 11px; color: var(--text-gray);">ID: 73138911</div>
             </div>
             <button style="background: var(--border-color); color: white; border: none; padding: 6px 14px; border-radius: 6px;">عرض</button>
@@ -362,13 +567,13 @@ MAIN_TEMPLATE = """
     </div>
 
     <div class="tab-content" id="tab-people">
-        <div style="font-weight: bold; margin-bottom: 15px;">اكتشف الأشخاص المتصلين</div>
+        <div style="font-weight: bold; margin-bottom: 15px;">الأعضاء المتصلين</div>
         <div class="menu-item">
             <div>
                 <div style="font-weight: bold;">HUSSAM 👑</div>
                 <div style="font-size: 11px; color: var(--text-gray);">ID: 46750674</div>
             </div>
-            <span style="color: var(--neon-green); font-size: 13px;">صديق</span>
+            <span style="color: var(--neon-green); font-size: 13px;">عضو VIP</span>
         </div>
     </div>
 
@@ -380,12 +585,12 @@ MAIN_TEMPLATE = """
             </div>
         </div>
         
-        <div style="font-size: 18px; font-weight: bold;">{{ name }} <span style="color: #00a884;">✔</span></div>
-        <div style="color: var(--neon-green); font-size: 12px; margin-top: 2px;">● متصل الآن</div>
+        <div style="font-size: 18px; font-weight: bold;">{{ name }} <span style="color: var(--neon-green);">✔</span></div>
+        <div style="color: var(--neon-green); font-size: 12px; margin-top: 2px;">● متصل الآن (VIP)</div>
 
         <div class="user-id-card">
             <div style="display: flex; justify-content: space-between;"><span>USERNAME:</span> <b>@{{ username }}</b></div>
-            <div style="display: flex; justify-content: space-between;"><span>ID:</span> <b>{{ user_id_code }}</b></div>
+            <div style="display: flex; justify-content: space-between;"><span>VIP ID:</span> <b>{{ user_id_code }}</b></div>
         </div>
 
         <div class="stats-grid">
@@ -406,7 +611,6 @@ MAIN_TEMPLATE = """
             <div class="menu-item"><span>خلفية الدردشة</span> <span>›</span></div>
             <div class="menu-item"><span>من زار بروفايلي</span> <span>›</span></div>
             <div class="menu-item"><span>الرسائل المجهولة</span> <span>›</span></div>
-            <div class="menu-item"><span>كود الاستعادة</span> <span>›</span></div>
             <a href="/logout" class="menu-item danger">تسجيل الخروج</a>
         </div>
     </div>
@@ -460,32 +664,56 @@ def home():
         name=session.get('name'),
         username=session.get('username'),
         user_id_code=session.get('user_id_code'),
-        visits=random.randint(3, 12)
+        visits=random.randint(5, 18)
     )
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    error = None
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        username = request.form.get('username', '').lower().strip()
+        password = request.form.get('password', '')
+
+        if not name or not username or not password:
+            error = 'يرجى ملء جميع الحقول المطلوبة'
+        else:
+            with get_db() as conn:
+                existing = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
+                if existing:
+                    error = 'اسم المستخدم هذا مأخوذ بالفعل، جرّب غيره'
+                else:
+                    user_id_code = str(random.randint(10000000, 99999999))
+                    hashed_pw = generate_password_hash(password)
+                    conn.execute(
+                        'INSERT INTO users (user_id_code, name, username, password) VALUES (?, ?, ?, ?)',
+                        (user_id_code, name, username, hashed_pw)
+                    )
+                    conn.commit()
+                    return redirect(url_for('login'))
+
+    return render_template_string(AUTH_TEMPLATE, mode='register', error=error)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    error = None
     if request.method == 'POST':
-        username = request.form['username'].lower().strip()
-        password = request.form['password']
+        username = request.form.get('username', '').lower().strip()
+        password = request.form.get('password', '')
+
         with get_db() as conn:
             user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+
         if user and check_password_hash(user['password'], password):
             session['user_id'] = user['id']
             session['name'] = user['name']
             session['username'] = user['username']
             session['user_id_code'] = user['user_id_code']
             return redirect(url_for('home'))
-    return '''
-    <body style="background:#0b141a;color:white;text-align:center;font-family:sans-serif;padding-top:80px;">
-        <h2>تسجيل الدخول</h2>
-        <form method="POST">
-            <input name="username" placeholder="اسم المستخدم" style="padding:12px;margin:8px;border-radius:8px;" required><br>
-            <input type="password" name="password" placeholder="كلمة المرور" style="padding:12px;margin:8px;border-radius:8px;" required><br>
-            <button type="submit" style="padding:12px 24px;background:#00a884;color:white;border:none;border-radius:8px;font-weight:bold;">دخول</button>
-        </form>
-    </body>
-    '''
+        else:
+            error = 'اسم المستخدم أو كلمة المرور غير صحيحة'
+
+    return render_template_string(AUTH_TEMPLATE, mode='login', error=error)
 
 @app.route('/logout')
 def logout():
@@ -504,3 +732,4 @@ def handle_new_message(data):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port)
+
