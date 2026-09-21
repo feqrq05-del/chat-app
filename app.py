@@ -9,7 +9,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'higori-platform-vip-super-secret-2026'
+app.config['SECRET_KEY'] = 'higori-platform-vip-ultra-2026'
 
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -33,7 +33,7 @@ def init_db():
                 password TEXT NOT NULL,
                 avatar TEXT DEFAULT '',
                 cover TEXT DEFAULT '',
-                bio TEXT DEFAULT 'أهلاً بكم في منصة Higori Platform VIP',
+                bio TEXT DEFAULT 'VIP Member at Higori Platform',
                 visits INTEGER DEFAULT 0,
                 joined_date TEXT
             )
@@ -55,8 +55,6 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sender_id INTEGER,
                 sender_name TEXT,
-                receiver_id INTEGER,
-                group_id INTEGER DEFAULT 0,
                 content TEXT,
                 view_once INTEGER DEFAULT 0,
                 created_at TEXT
@@ -77,16 +75,7 @@ def init_db():
                 name TEXT NOT NULL,
                 group_code TEXT UNIQUE,
                 owner_id INTEGER,
-                cover TEXT DEFAULT '',
                 created_at TEXT
-            )
-        ''')
-        conn.execute('''
-            CREATE TABLE IF NOT EXISTS group_members (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                group_id INTEGER,
-                user_id INTEGER,
-                role TEXT DEFAULT 'member'
             )
         ''')
         conn.commit()
@@ -189,11 +178,11 @@ AUTH_TEMPLATE = """
     <div class="vip-pill">VIP PLATFORM</div>
     <div class="title">Higori <span>platform</span></div>
     {% if mode == 'register' %}
-        <div class="subtitle">إنشاء حساب مستخدم مميز جديد</div>
+        <div class="subtitle">إنشاء حساب مستخدم جديد ومميّز</div>
         {% if error %}<div class="error-badge">{{ error }}</div>{% endif %}
         <form method="POST">
             <div class="form-group"><label>الاسم الظاهر</label><input class="inp" name="name" placeholder="اسمك الظاهر" required></div>
-            <div class="form-group"><label>اسم المستخدم (Username بالإنجليزية)</label><input class="inp" name="username" placeholder="مثال: osama_vip" required></div>
+            <div class="form-group"><label>اسم المستخدم (Username بالإنجليزية)</label><input class="inp" name="username" placeholder="osama_vip" required></div>
             <div class="form-group"><label>كلمة المرور</label><input class="inp" type="password" name="password" placeholder="••••••••" required></div>
             <button class="btn-vip" type="submit">إنشاء الحساب</button>
         </form>
@@ -232,14 +221,13 @@ MAIN_TEMPLATE = """
             --text-main: #ffffff;
             --text-muted: #8ba2b5;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
             padding: 12px 8px;
         }
         .phone-wrapper {
@@ -248,7 +236,6 @@ MAIN_TEMPLATE = """
             display: flex;
             flex-direction: column;
             gap: 12px;
-            position: relative;
         }
         .header-top {
             display: flex;
@@ -650,7 +637,7 @@ MAIN_TEMPLATE = """
     <div class="tab-panel" id="tab-chats">
         <div class="chat-sub-nav">
             <div class="sub-pill active">الدردشة العامة</div>
-            <div class="sub-pill" onclick="showToast('ميزة الرسائل المجهولة مفعلة')">الرسائل المجهولة</div>
+            <div class="sub-pill" onclick="showToast('الرسائل المجهولة مفعلة')">الرسائل المجهولة</div>
         </div>
 
         <div id="chat-stream">
@@ -693,13 +680,13 @@ MAIN_TEMPLATE = """
                     <div class="item-avatar">🎯</div>
                     <div class="item-details">
                         <div class="item-name">{{ g.name }}</div>
-                        <div class="item-sub">ID: {{ g.group_code }} | المالك: {{ g.owner_name }}</div>
+                        <div class="item-sub">ID: {{ g.group_code }}</div>
                     </div>
                     <button class="btn-small" onclick="showToast('تم فتح روم المجموعة')">عرض</button>
                 </div>
             {% endfor %}
             {% if not my_groups %}
-                <div style="text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 13px;">لا تنتمي إلى أي مجموعة بعد. أنشئ مجموعتك الخاصة الآن!</div>
+                <div style="text-align: center; color: var(--text-muted); margin-top: 50px; font-size: 13px;">لا تنتمي إلى أي مجموعة بعد. أنشئ مجموعتك الأولى الآن!</div>
             {% endif %}
         </div>
     </div>
@@ -1029,32 +1016,18 @@ def home():
         current_user = conn.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
         
         if search_query:
-            all_users = conn.execute(
-                "SELECT * FROM users WHERE (name LIKE ? OR username LIKE ? OR user_id_code LIKE ?) AND id != ?",
-                (f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", session['user_id'])
-            ).fetchall()
+            all_users = conn.execute('SELECT * FROM users WHERE (name LIKE ? OR username LIKE ? OR user_id_code LIKE ?) AND id != ?', (f"%{search_query}%", f"%{search_query}%", f"%{search_query}%", session['user_id'])).fetchall()
         else:
             all_users = conn.execute('SELECT * FROM users ORDER BY id DESC LIMIT 30').fetchall()
 
         stories = conn.execute('SELECT * FROM stories ORDER BY id DESC LIMIT 20').fetchall()
-        messages = conn.execute('SELECT * FROM messages WHERE group_id = 0 ORDER BY id ASC LIMIT 80').fetchall()
+        messages = conn.execute('SELECT * FROM messages ORDER BY id ASC LIMIT 80').fetchall()
 
-        pending_requests = conn.execute('''
-            SELECT users.* FROM friendships 
-            JOIN users ON friendships.user_a = users.id 
-            WHERE friendships.user_b = ? AND friendships.status = 'pending'
-        ''', (session['user_id'],)).fetchall()
+        pending_requests = conn.execute('SELECT users.* FROM friendships JOIN users ON friendships.user_a = users.id WHERE friendships.user_b = ? AND friendships.status = "pending"', (session['user_id'],)).fetchall()
 
-        friends_count = conn.execute('''
-            SELECT COUNT(*) as c FROM friendships 
-            WHERE (user_a = ? OR user_b = ?) AND status = 'accepted'
-        ''', (session['user_id'], session['user_id'])).fetchone()['c']
+        friends_count = conn.execute('SELECT COUNT(*) as c FROM friendships WHERE (user_a = ? OR user_b = ?) AND status = "accepted"', (session['user_id'], session['user_id'])).fetchone()['c']
 
-        my_groups = conn.execute('''
-            SELECT groups.*, users.name as owner_name FROM groups 
-            JOIN users ON groups.owner_id = users.id 
-            ORDER BY groups.id DESC
-        ''').fetchall()
+        my_groups = conn.execute('SELECT * FROM groups ORDER BY id DESC').fetchall()
 
     return render_template_string(
         MAIN_TEMPLATE,
@@ -1079,7 +1052,7 @@ def view_user_profile(user_id):
     with get_db() as conn:
         conn.execute('UPDATE users SET visits = visits + 1 WHERE id = ?', (user_id,))
         conn.commit()
-        u = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)) .fetchone()
+        u = conn.execute('SELECT * FROM users WHERE id = ?', (user_id,)).fetchone()
     if not u:
         return redirect(url_for('home'))
     return render_template_string(OTHER_PROFILE_TEMPLATE, u=u)
@@ -1124,10 +1097,7 @@ def publish_story():
         now_str = datetime.now().strftime('%Y-%m-%d %H:%M')
         with get_db() as conn:
             u = conn.execute('SELECT name, avatar FROM users WHERE id = ?', (session['user_id'],)).fetchone()
-            conn.execute('''
-                INSERT INTO stories (user_id, user_name, user_avatar, content_text, media_path, privacy, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (session['user_id'], u['name'], u['avatar'], text, media_fn, privacy, now_str))
+            conn.execute('INSERT INTO stories (user_id, user_name, user_avatar, content_text, media_path, privacy, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)', (session['user_id'], u['name'], u['avatar'], text, media_fn, privacy, now_str))
             conn.commit()
     return redirect(url_for('home'))
 
@@ -1137,11 +1107,9 @@ def add_friend(target_id):
         return redirect(url_for('home'))
     now_str = datetime.now().strftime('%Y-%m-%d')
     with get_db() as conn:
-        chk = conn.execute('SELECT * FROM friendships WHERE (user_a = ? AND user_b = ?) OR (user_a = ? AND user_b = ?)',
-                           (session['user_id'], target_id, target_id, session['user_id'])).fetchone()
+        chk = conn.execute('SELECT * FROM friendships WHERE (user_a = ? AND user_b = ?) OR (user_a = ? AND user_b = ?)', (session['user_id'], target_id, target_id, session['user_id'])).fetchone()
         if not chk:
-            conn.execute('INSERT INTO friendships (user_a, user_b, status, created_at) VALUES (?, ?, ?, ?)',
-                         (session['user_id'], target_id, 'pending', now_str))
+            conn.execute('INSERT INTO friendships (user_a, user_b, status, created_at) VALUES (?, ?, ?, ?)', (session['user_id'], target_id, 'pending', now_str))
             conn.commit()
     return redirect(url_for('home'))
 
@@ -1150,8 +1118,7 @@ def accept_friend(requester_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
     with get_db() as conn:
-        conn.execute('UPDATE friendships SET status = ? WHERE user_a = ? AND user_b = ?',
-                     ('accepted', requester_id, session['user_id']))
+        conn.execute('UPDATE friendships SET status = ? WHERE user_a = ? AND user_b = ?', ('accepted', requester_id, session['user_id']))
         conn.commit()
     return redirect(url_for('home'))
 
@@ -1173,4 +1140,25 @@ def new_group():
         code = str(random.randint(10000000, 99999999))
         now_str = datetime.now().strftime('%Y-%m-%d')
         with get_db() as conn:
-            cur = 
+            conn.execute('INSERT INTO groups (name, group_code, owner_id, created_at) VALUES (?, ?, ?, ?)', (g_name, code, session['user_id'], now_str))
+            conn.commit()
+    return redirect(url_for('home'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    error = None
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        username = request.form.get('username', '').lower().strip()
+        password = request.form.get('password', '')
+
+        if not name or not username or not password:
+            error = 'يرجى إكمال جميع الحقول'
+        else:
+            with get_db() as conn:
+                exists = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
+                if exists:
+                    error = 'اسم المستخدم هذا مستخدم مسبقاً'
+                else:
+                    vip_id = str(random.randint(10000000, 99999999))
+                    joi
