@@ -11,7 +11,8 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'higori-platform-vip-ultra-2026'
 
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -24,7 +25,7 @@ def get_db():
 
 def init_db():
     with get_db() as conn:
-        conn.execute('''
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id_code TEXT UNIQUE,
@@ -37,8 +38,8 @@ def init_db():
                 visits INTEGER DEFAULT 0,
                 joined_date TEXT
             )
-        ''')
-        conn.execute('''
+        """)
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS stories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER,
@@ -49,8 +50,8 @@ def init_db():
                 privacy TEXT DEFAULT 'public',
                 created_at TEXT
             )
-        ''')
-        conn.execute('''
+        """)
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sender_id INTEGER,
@@ -59,8 +60,8 @@ def init_db():
                 view_once INTEGER DEFAULT 0,
                 created_at TEXT
             )
-        ''')
-        conn.execute('''
+        """)
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS friendships (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_a INTEGER,
@@ -68,8 +69,8 @@ def init_db():
                 status TEXT DEFAULT 'pending',
                 created_at TEXT
             )
-        ''')
-        conn.execute('''
+        """)
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS groups (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -77,7 +78,7 @@ def init_db():
                 owner_id INTEGER,
                 created_at TEXT
             )
-        ''')
+        """)
         conn.commit()
 
 init_db()
@@ -190,7 +191,7 @@ AUTH_TEMPLATE = """
         <div class="subtitle">إنشاء حساب مستخدم جديد ومميّز</div>
         <div id="reg-err" class="error-badge" style="display:none;"></div>
         <div class="form-group"><label>الاسم الظاهر</label><input class="inp" id="r-name" placeholder="اسمك الظاهر"></div>
-        <div class="form-group"><label>اسم المستخدم (Username بالإنجليزية)</label><input class="inp" id="r-user" placeholder="osama_vip"></div>
+        <div class="form-group"><label>اسم المستخدم (Username)</label><input class="inp" id="r-user" placeholder="user_vip"></div>
         <div class="form-group"><label>كلمة المرور</label><input class="inp" id="r-pass" type="password" placeholder="••••••••"></div>
         <button class="btn-vip" onclick="submitRegister()">إنشاء الحساب</button>
         <div class="toggle-link">لديك حساب بالفعل؟ <a onclick="toggleAuth(false)">تسجيل الدخول</a></div>
@@ -796,7 +797,7 @@ MAIN_TEMPLATE = """
     </div>
 </div>
 
-<!-- Add Story Modal -->
+<!-- Modals -->
 <div class="modal-overlay" id="add-story-modal">
     <div class="modal-content">
         <button class="btn-close-modal" onclick="closeModal('add-story-modal')">✕</button>
@@ -809,7 +810,6 @@ MAIN_TEMPLATE = """
     </div>
 </div>
 
-<!-- View Story Modal -->
 <div class="modal-overlay" id="view-story-modal">
     <div class="modal-content" style="text-align: center;">
         <button class="btn-close-modal" onclick="closeModal('view-story-modal')">✕</button>
@@ -820,7 +820,6 @@ MAIN_TEMPLATE = """
     </div>
 </div>
 
-<!-- Create Group Modal -->
 <div class="modal-overlay" id="create-group-modal">
     <div class="modal-content">
         <button class="btn-close-modal" onclick="closeModal('create-group-modal')">✕</button>
@@ -832,7 +831,6 @@ MAIN_TEMPLATE = """
     </div>
 </div>
 
-<!-- Edit Profile Modal -->
 <div class="modal-overlay" id="edit-profile-modal">
     <div class="modal-content">
         <button class="btn-close-modal" onclick="closeModal('edit-profile-modal')">✕</button>
@@ -859,7 +857,6 @@ MAIN_TEMPLATE = """
     </div>
 </div>
 
-<!-- Settings Modal -->
 <div class="modal-overlay" id="settings-modal">
     <div class="modal-content">
         <button class="btn-close-modal" onclick="closeModal('settings-modal')">✕</button>
@@ -902,7 +899,6 @@ MAIN_TEMPLATE = """
         showToast('OK تم النسخ: ' + val);
     }
 
-    // Fast Profile Save via Fetch
     function fastSaveProfile() {
         const fd = new FormData();
         fd.append('name', document.getElementById('ep-name').value);
@@ -932,7 +928,6 @@ MAIN_TEMPLATE = """
         });
     }
 
-    // Fast Story Publish via Fetch
     function fastPublishStory() {
         const fd = new FormData();
         fd.append('story_text', document.getElementById('st-text').value);
@@ -961,7 +956,6 @@ MAIN_TEMPLATE = """
         });
     }
 
-    // Fast Group Create via Fetch
     function fastCreateGroup() {
         const name = document.getElementById('cg-name').value.trim();
         if(!name) return;
@@ -1064,24 +1058,25 @@ MAIN_TEMPLATE = """
 </html>
 """
 
-# --- الراوتات والـ APIs السريعة (JSON / Fetch) ---
-
 @app.route('/')
 def home():
     if 'user_id' not in session:
         return render_template_string(AUTH_TEMPLATE)
 
     with get_db() as conn:
-        current_user = conn.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+        current_user = conn.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],)).fetchone()
         if not current_user:
             session.clear()
             return render_template_string(AUTH_TEMPLATE)
 
-        all_users = conn.execute('SELECT * FROM users ORDER BY id DESC LIMIT 20').fetchall()
-        stories = conn.execute('SELECT * FROM stories ORDER BY id DESC LIMIT 15').fetchall()
-        messages = conn.execute('SELECT * FROM messages ORDER BY id ASC LIMIT 50').fetchall()
-        friends_count = conn.execute('SELECT COUNT(*) as c FROM friendships WHERE (user_a = ? OR user_b = ?) AND status = "accepted"', (session['user_id'], session['user_id'])).fetchone()['c']
-        my_groups = conn.execute('SELECT * FROM groups ORDER BY id DESC').fetchall()
+        all_users = conn.execute("SELECT * FROM users ORDER BY id DESC LIMIT 20").fetchall()
+        stories = conn.execute("SELECT * FROM stories ORDER BY id DESC LIMIT 15").fetchall()
+        messages = conn.execute("SELECT * FROM messages ORDER BY id ASC LIMIT 50").fetchall()
+        friends_count = conn.execute("""
+            SELECT COUNT(*) as c FROM friendships 
+            WHERE (user_a = ? OR user_b = ?) AND status = 'accepted'
+        """, (session['user_id'], session['user_id'])).fetchone()['c']
+        my_groups = conn.execute("SELECT * FROM groups ORDER BY id DESC").fetchall()
 
     return render_template_string(
         MAIN_TEMPLATE,
@@ -1103,7 +1098,7 @@ def api_login():
     username = data.get('username', '').lower().strip()
     password = data.get('password', '')
     with get_db() as conn:
-        u = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        u = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
     if u and check_password_hash(u['password'], password):
         session['user_id'] = u['id']
         session['username'] = u['username']
@@ -1119,13 +1114,16 @@ def api_register():
     password = data.get('password', '')
 
     with get_db() as conn:
-        exists = conn.execute('SELECT id FROM users WHERE username = ?', (username,)).fetchone()
+        exists = conn.execute("SELECT id FROM users WHERE username = ?", (username,)).fetchone()
         if exists:
             return jsonify({'success': False, 'error': 'اسم المستخدم هذا مستخدم مسبقاً'})
         vip_id = str(random.randint(10000000, 99999999))
         joined = datetime.now().strftime('%Y-%m-%d %H:%M')
         hashed = generate_password_hash(password)
-        cur = conn.execute('INSERT INTO users (user_id_code, name, username, password, joined_date) VALUES (?, ?, ?, ?, ?)', (vip_id, name, username, hashed, joined))
+        cur = conn.execute("""
+            INSERT INTO users (user_id_code, name, username, password, joined_date) 
+            VALUES (?, ?, ?, ?, ?)
+        """, (vip_id, name, username, hashed, joined))
         conn.commit()
         session['user_id'] = cur.lastrowid
         session['username'] = username
@@ -1146,16 +1144,16 @@ def api_save_profile():
 
     with get_db() as conn:
         if name:
-            conn.execute('UPDATE users SET name = ?, bio = ? WHERE id = ?', (name, bio, session['user_id']))
+            conn.execute("UPDATE users SET name = ?, bio = ? WHERE id = ?", (name, bio, session['user_id']))
             session['name'] = name
         if avatar and avatar.filename:
             avatar_fn = f"av_{session['user_id']}_{int(time.time())}_{secure_filename(avatar.filename)}"
             avatar.save(os.path.join(app.config['UPLOAD_FOLDER'], avatar_fn))
-            conn.execute('UPDATE users SET avatar = ? WHERE id = ?', (avatar_fn, session['user_id']))
+            conn.execute("UPDATE users SET avatar = ? WHERE id = ?", (avatar_fn, session['user_id']))
         if cover and cover.filename:
             cover_fn = f"cv_{session['user_id']}_{int(time.time())}_{secure_filename(cover.filename)}"
             cover.save(os.path.join(app.config['UPLOAD_FOLDER'], cover_fn))
-            conn.execute('UPDATE users SET cover = ? WHERE id = ?', (cover_fn, session['user_id']))
+            conn.execute("UPDATE users SET cover = ? WHERE id = ?", (cover_fn, session['user_id']))
         conn.commit()
 
     return jsonify({'success': True, 'name': name, 'bio': bio, 'avatar': avatar_fn, 'cover': cover_fn})
@@ -1174,8 +1172,11 @@ def api_publish_story():
 
     now_str = datetime.now().strftime('%Y-%m-%d %H:%M')
     with get_db() as conn:
-        u = conn.execute('SELECT name, avatar FROM users WHERE id = ?', (session['user_id'],)).fetchone()
-        conn.execute('INSERT INTO stories (user_id, user_name, user_avatar, content_text, media_path, privacy, created_at) VALUES (?, ?, ?, ?, ?, "public", ?)', (session['user_id'], u['name'], u['avatar'], text, media_fn, now_str))
+        u = conn.execute("SELECT name, avatar FROM users WHERE id = ?", (session['user_id'],)).fetchone()
+        conn.execute("""
+            INSERT INTO stories (user_id, user_name, user_avatar, content_text, media_path, privacy, created_at) 
+            VALUES (?, ?, ?, ?, ?, 'public', ?)
+        """, (session['user_id'], u['name'], u['avatar'], text, media_fn, now_str))
         conn.commit()
 
     return jsonify({'success': True, 'user_name': u['name'], 'media_path': media_fn, 'content_text': text, 'created_at': now_str})
@@ -1189,7 +1190,10 @@ def api_new_group():
     code = str(random.randint(10000000, 99999999))
     now_str = datetime.now().strftime('%Y-%m-%d')
     with get_db() as conn:
-        conn.execute('INSERT INTO groups (name, group_code, owner_id, created_at) VALUES (?, ?, ?, ?)', (name, code, session['user_id'], now_str))
+        conn.execute("""
+            INSERT INTO groups (name, group_code, owner_id, created_at) 
+            VALUES (?, ?, ?, ?)
+        """, (name, code, session['user_id'], now_str))
         conn.commit()
     return jsonify({'success': True, 'name': name, 'code': code})
 
@@ -1198,4 +1202,64 @@ def api_add_friend(target_id):
     if 'user_id' not in session:
         return jsonify({'success': False})
     with get_db() as conn:
-        chk = conn.execute('SELE
+        chk = conn.execute("""
+            SELECT * FROM friendships 
+            WHERE (user_a = ? AND user_b = ?) OR (user_a = ? AND user_b = ?)
+        """, (session['user_id'], target_id, target_id, session['user_id'])).fetchone()
+        if not chk:
+            conn.execute("""
+                INSERT INTO friendships (user_a, user_b, status, created_at) 
+                VALUES (?, ?, 'pending', ?)
+            """, (session['user_id'], target_id, datetime.now().strftime('%Y-%m-%d')))
+            conn.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/search_users')
+def api_search_users():
+    q = request.args.get('q', '').strip()
+    with get_db() as conn:
+        if q:
+            rows = conn.execute("""
+                SELECT id, name, username, user_id_code, avatar FROM users 
+                WHERE (name LIKE ? OR username LIKE ? OR user_id_code LIKE ?) AND id != ? 
+                LIMIT 15
+            """, (f"%{q}%", f"%{q}%", f"%{q}%", session.get('user_id', 0))).fetchall()
+        else:
+            rows = conn.execute("""
+                SELECT id, name, username, user_id_code, avatar FROM users 
+                WHERE id != ? 
+                LIMIT 15
+            """, (session.get('user_id', 0),)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@app.route('/api/logout')
+def api_logout():
+    session.clear()
+    return jsonify({'success': True})
+
+@socketio.on('client_msg')
+def on_client_msg(data):
+    if 'user_id' in session:
+        text = data.get('text', '').strip()
+        view_once = data.get('view_once', 0)
+        if text:
+            now_time = datetime.now().strftime('%H:%M')
+            with get_db() as conn:
+                conn.execute("""
+                    INSERT INTO messages (sender_id, sender_name, content, view_once, created_at) 
+                    VALUES (?, ?, ?, ?, ?)
+                """, (session['user_id'], session['name'], text, view_once, now_time))
+                conn.commit()
+
+            emit('broadcast_msg', {
+                'sender_id': session['user_id'],
+                'sender_name': session['name'],
+                'content': text,
+                'view_once': view_once,
+                'created_at': now_time,
+                'is_me': True
+            })
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
